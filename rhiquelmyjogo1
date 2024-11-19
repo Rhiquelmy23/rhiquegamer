@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo Pac-Man Simples</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #222;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+
+        #gameCanvas {
+            border: 2px solid black;
+            background-color: #000;
+            display: block;
+            margin-bottom: 20px;
+        }
+
+        .scoreboard {
+            font-size: 20px;
+            margin: 10px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: white;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 20px;
+        }
+
+        .button:hover {
+            background-color: #218838;
+        }
+
+        .button:active {
+            background-color: #1e7e34;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="scoreboard">
+        Pontuação: <span id="score">0</span>
+    </div>
+    <canvas id="gameCanvas" width="500" height="500"></canvas>
+    <button class="button" id="restartButton">Reiniciar Jogo</button>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const restartButton = document.getElementById('restartButton');
+
+        // Pac-Man
+        const pacman = {
+            x: 50,
+            y: 50,
+            radius: 20,
+            speed: 3,
+            dx: 0,
+            dy: 0,
+            color: 'yellow',
+        };
+
+        // Fantasmas
+        const ghosts = [
+            { x: 200, y: 200, radius: 20, color: 'red', speed: 2, dx: 0, dy: 0 },
+            { x: 350, y: 150, radius: 20, color: 'blue', speed: 2, dx: 0, dy: 0 },
+            { x: 150, y: 350, radius: 20, color: 'pink', speed: 2, dx: 0, dy: 0 },
+        ];
+
+        const points = [
+            { x: 100, y: 100, radius: 5 },
+            { x: 200, y: 200, radius: 5 },
+            { x: 300, y: 300, radius: 5 },
+            { x: 400, y: 100, radius: 5 },
+            { x: 350, y: 200, radius: 5 },
+            { x: 150, y: 350, radius: 5 },
+            { x: 250, y: 400, radius: 5 },
+        ];
+
+        let score = 0;
+
+        // Função para desenhar o Pac-Man
+        function drawPacMan() {
+            ctx.beginPath();
+            ctx.arc(pacman.x, pacman.y, pacman.radius, 0.2 * Math.PI, 1.8 * Math.PI); // "boca" aberta
+            ctx.lineTo(pacman.x, pacman.y); // Linha para o centro
+            ctx.fillStyle = pacman.color;
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Função para desenhar os fantasmas
+        function drawGhosts() {
+            ghosts.forEach(ghost => {
+                ctx.beginPath();
+                ctx.arc(ghost.x, ghost.y, ghost.radius, 0, Math.PI * 2);
+                ctx.fillStyle = ghost.color;
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        // Função para desenhar pontos
+        function drawPoints() {
+            ctx.fillStyle = 'white';
+            points.forEach(point => {
+                ctx.beginPath();
+                ctx.arc(point.x, point.y, point.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        // Função para mover o Pac-Man
+        function movePacMan() {
+            pacman.x += pacman.dx;
+            pacman.y += pacman.dy;
+
+            // Verificar limites da tela
+            if (pacman.x < 0) pacman.x = canvas.width;
+            if (pacman.x > canvas.width) pacman.x = 0;
+            if (pacman.y < 0) pacman.y = canvas.height;
+            if (pacman.y > canvas.height) pacman.y = 0;
+        }
+
+        // Função para mover os fantasmas
+        function moveGhosts() {
+            ghosts.forEach(ghost => {
+                const dx = pacman.x - ghost.x;
+                const dy = pacman.y - ghost.y;
+                const dist = Math.hypot(dx, dy);
+
+                // Move o fantasma em direção ao Pac-Man
+                ghost.dx = (dx / dist) * ghost.speed;
+                ghost.dy = (dy / dist) * ghost.speed;
+
+                ghost.x += ghost.dx;
+                ghost.y += ghost.dy;
+
+                // Impedir que o fantasma saia da tela
+                if (ghost.x < 0) ghost.x = canvas.width;
+                if (ghost.x > canvas.width) ghost.x = 0;
+                if (ghost.y < 0) ghost.y = canvas.height;
+                if (ghost.y > canvas.height) ghost.y = 0;
+            });
+        }
+
+        // Função para verificar colisões com pontos
+        function checkCollisions() {
+            points.forEach((point, index) => {
+                const dist = Math.hypot(pacman.x - point.x, pacman.y - point.y);
+                if (dist < pacman.radius + point.radius) {
+                    points.splice(index, 1); // Remove o ponto da lista
+                    score++;
+                    scoreDisplay.textContent = score; // Atualiza a pontuação
+                }
+            });
+        }
+
+        // Função para verificar colisões com fantasmas
+        function checkGhostCollisions() {
+            ghosts.forEach(ghost => {
+                const dist = Math.hypot(pacman.x - ghost.x, pacman.y - ghost.y);
+                if (dist < pacman.radius + ghost.radius) {
+                    restartGame(); // Reinicia o jogo se Pac-Man colidir com um fantasma
+                }
+            });
+        }
+
+        // Função para desenhar o jogo
+        function update() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa o canvas
+            drawPacMan();
+            drawGhosts();
+            drawPoints();
+            movePacMan();
+            moveGhosts();
+            checkCollisions();
+            checkGhostCollisions();
+
+            requestAnimationFrame(update); // Repeats the game
+        }
+
+        // Função para controlar o Pac-Man com as teclas de seta
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp') {
+                pacman.dy = -pacman.speed;
+                pacman.dx = 0;
+            } else if (e.key === 'ArrowDown') {
+                pacman.dy = pacman.speed;
+                pacman.dx = 0;
+            } else if (e.key === 'ArrowLeft') {
+                pacman.dx = -pacman.speed;
+                pacman.dy = 0;
+            } else if (e.key === 'ArrowRight') {
+                pacman.dx = pacman.speed;
+                pacman.dy = 0;
+            }
+        });
+
+        // Função para reiniciar o jogo
+        function restartGame() {
+            pacman.x = 50;
+            pacman.y = 50;
+            pacman.dx = 0;
+            pacman.dy = 0;
+            score = 0;
+            points.length = 0;
+            // Recriar pontos
+            points.push(
+                { x: 100, y: 100, radius: 5 },
+                { x: 200, y: 200, radius: 5 },
+                { x: 300, y: 300, radius: 5 },
+                { x: 400, y: 100, radius: 5 },
+                { x: 350, y: 200, radius: 5 },
+                { x: 150, y: 350, radius: 5 },
+                { x: 250, y: 400, radius: 5 }
+            );
+            scoreDisplay.textContent = score;
+        }
+
+        // Adicionar evento para o botão de reiniciar
+        restartButton.addEventListener('click', () => {
+            restartGame();
+        });
+
+        // Iniciar o jogo
+        update();
+    </script>
+</body>
+
+</html>
