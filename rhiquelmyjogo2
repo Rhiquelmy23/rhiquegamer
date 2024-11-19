@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catcher Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            flex-direction: column;
+        }
+
+        canvas {
+            background-color: #87ceeb;
+            border: 2px solid #fff;
+        }
+
+        .scoreboard,
+        .lives {
+            font-size: 20px;
+            color: white;
+            margin: 10px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-top: 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .button:hover {
+            background-color: #218838;
+        }
+
+        .button:active {
+            background-color: #1e7e34;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="scoreboard">
+        Pontos: <span id="score">0</span>
+    </div>
+    <div class="lives">
+        Vidas: <span id="lives">3</span>
+    </div>
+    <canvas id="gameCanvas" width="400" height="600"></canvas>
+    <button class="button" onclick="startGame()">Reiniciar Jogo</button>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let score = 0;
+        let lives = 3;
+        let fruits = [];
+        let basket;
+        let gameInterval;
+        let spawnInterval;
+        let isGameRunning = false;
+
+        // Função para iniciar o jogo
+        function startGame() {
+            score = 0;
+            lives = 3;
+            fruits = [];
+            basket = { x: canvas.width / 2 - 30, y: canvas.height - 50, width: 60, height: 30 };
+            isGameRunning = true;
+            document.getElementById('score').innerText = score;
+            document.getElementById('lives').innerText = lives;
+
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+
+            gameInterval = setInterval(updateGame, 1000 / 60); // Atualiza o jogo a 60 FPS
+            spawnInterval = setInterval(spawnFruit, 1500); // Gera frutas a cada 1,5 segundos
+
+            // Inicia o movimento da cesta com o mouse
+            document.addEventListener('mousemove', moveBasket);
+        }
+
+        // Função para desenhar a cesta
+        function drawBasket() {
+            ctx.fillStyle = '#f39c12';
+            ctx.fillRect(basket.x, basket.y, basket.width, basket.height);
+        }
+
+        // Função para desenhar as frutas
+        function drawFruits() {
+            ctx.fillStyle = '#e74c3c';
+            fruits.forEach(fruit => {
+                ctx.beginPath();
+                ctx.arc(fruit.x, fruit.y, fruit.radius, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // Função para mover a cesta
+        function moveBasket(event) {
+            const mouseX = event.clientX - canvas.offsetLeft;
+            basket.x = mouseX - basket.width / 2;
+
+            // Impede que a cesta saia da tela
+            if (basket.x < 0) basket.x = 0;
+            if (basket.x + basket.width > canvas.width) basket.x = canvas.width - basket.width;
+        }
+
+        // Função para mover as frutas
+        function moveFruits() {
+            for (let i = fruits.length - 1; i >= 0; i--) {
+                const fruit = fruits[i];
+                fruit.y += 3; // Move a fruta para baixo
+
+                // Verifica se a fruta tocou a cesta
+                if (
+                    fruit.y + fruit.radius >= basket.y &&
+                    fruit.x >= basket.x && fruit.x <= basket.x + basket.width
+                ) {
+                    score++;
+                    document.getElementById('score').innerText = score;
+                    fruits.splice(i, 1); // Remove a fruta quando pega pela cesta
+
+                // Verifica se a fruta caiu no chão
+                } else if (fruit.y + fruit.radius > canvas.height) {
+                    fruits.splice(i, 1);
+                    lives--;
+                    document.getElementById('lives').innerText = lives;
+                    if (lives <= 0) {
+                        endGame();
+                    }
+                }
+            }
+        }
+
+        // Função para gerar frutas aleatórias
+        function spawnFruit() {
+            const radius = Math.random() * 20 + 10;
+            const x = Math.random() * (canvas.width - radius * 2) + radius;
+            const y = -radius;
+            fruits.push({ x, y, radius });
+        }
+
+        // Função para atualizar o jogo
+        function updateGame() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height); // Limpa a tela
+            drawBasket();
+            drawFruits();
+            moveFruits();
+        }
+
+        // Função para encerrar o jogo
+        function endGame() {
+            clearInterval(gameInterval);
+            clearInterval(spawnInterval);
+            isGameRunning = false;
+            alert(`Fim de Jogo! Você fez ${score} pontos.`);
+        }
+
+        // Inicia o jogo automaticamente quando a página carrega
+        window.onload = startGame;
+    </script>
+</body>
